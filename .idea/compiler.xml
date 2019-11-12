@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel>
+      <module name="LearnGradle.a.main" target="1.8" />
+      <module name="LearnGradle.a.test" target="1.8" />
+      <module name="LearnGradle.gradle.main" target="1.8" />
+      <module name="LearnGradle.gradle.test" target="1.8" />
+      <module name="LearnGradle.LearnG.main" target="1.8" />
+      <module name="LearnGradle.LearnG.test" target="1.8" />
+      <module name="LearnGradle.LearnGradle.main" target="1.8" />
+      <module name="LearnGradle.LearnGradle.test" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>

@@ -1,0 +1,78 @@
+apply plugin:'showTask'
+dependencies{
+    compile project(':model')
+}
+
+test{
+    //设置系统属性
+    systemProperty 'items','20'
+    //Java堆设置
+    minHeapSize = '128m'
+    maxHeapSize = '256m'
+//    jvmArgs '-XX:MaxPermSize=128m'
+    testLogging {
+        //打开标准输出和错误流的日志
+        showStandardStreams = true
+        //显示全部的异常跟踪栈信息
+        exceptionFormat 'full'
+        //在测试执行期间打印特定的测试事件
+        events 'started','passed','skipped','failed'
+        //在forked测试进程中执行测试类的最大数量
+        forkEvery = 5
+        //fork测试进程的最大数量
+        maxParallelForks = Runtime.runtime.availableProcessors()/2
+    }
+
+    exclude '**/*IntegTest.class'
+    reports.html.destination = file("$reports.html.destination/unit")
+    reports.junitXml.destination = file("$reports.junitXml.destination/unit")
+
+}
+
+
+
+sourceSets {
+    integrationTest{
+        //集成测试源目录
+        java.srcDir file('src/integTest/java')
+        //集成测试资源目录
+        resources.srcDir file('src/integTest/resources')
+        //编译时classPath
+        compileClasspath = sourceSets.main.output+configurations.testRuntime
+        //运行时classPath
+        runtimeClasspath = output+compileClasspath
+
+    }
+}
+
+
+task integrationTest(type:Test){
+    //将测试Task指定给可以找到测试类目录
+
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    //执行测试所需要的classpath
+    classpath = sourceSets.integrationTest.runtimeClasspath
+//    include '**/*IntegTest.class'
+//    reports.html.destination = file("$reports.html.destination/integration")
+//    reports.junitXml.destination = file("$reports.junitXml.destination/integration")
+
+}
+
+check.dependsOn integrationTest
+
+//作用与下面test.afterSuite 是一样的
+//test.addTestListener(new NotificationTestListener(project))
+test.afterSuite {
+    //测试套件执行后添加通知闭包
+    TestDescriptor suite,TestResult result ->
+        //检查测试套件是否至少包含一个测试
+        if(!suite.parent&&result.getTestCount()>0){
+            long elapsedTestTime = result.getEndTime() -result.getStartTime()
+
+            logger.quiet """ Elapsed time for execution of ${result.getTestCount()}
+                        test(s):$elapsedTestTime ms"""
+        }
+}
+
+
+

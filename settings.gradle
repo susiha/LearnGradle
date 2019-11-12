@@ -1,0 +1,11 @@
+rootProject.name = 'LearnGradle'
+
+include 'model'
+include 'repository'
+include 'app'
+rootProject.children.each {
+    it.buildFileName = it.name+'.gradle'
+}
+
+
+

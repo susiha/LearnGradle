@@ -1,0 +1,114 @@
+import com.susiha.ProjectVersion
+import com.susiha.ReleaseVersionListener
+import com.susiha.ReleaseVersionTask
+
+//Project接口提供了file方法，它会创建一个相对于项目目录的java.io.File实例
+ext.versionFile = file('project-version.properties')
+
+////task 配置块永远在task动作执行之前 被执行
+task loadVersion{
+    project.version = readVersion()
+}
+
+ProjectVersion readVersion(){
+    logger.quiet "Reading the version file"
+    if(!versionFile.exists()){
+        throw new GradleException("Required version file does not exist: $versionFile.canonicalPath")
+    }
+    Properties versionProps = new Properties()
+
+    versionFile.withInputStream{
+        stream -> versionProps.load(stream)
+    }
+
+    //在Groovy 中如果return 是方法中最后一条语句，可以省略它
+    new ProjectVersion(versionProps.major.toInteger(),
+            versionProps.minor.toInteger(),
+            versionProps.release.toBoolean())
+}
+
+tasks.addRule("Pattern: incrment<Classifier>Version - Increments the project version classifier"){
+    String taskName ->
+        if(taskName.startsWith('increment')&&taskName.endsWith('Version')){
+            task(taskName){
+                doLast {
+                    String classifier = (taskName - 'increment'-'Version').toLowerCase()
+                    String currentVersion = version.toString()
+                    switch (classifier){
+                        case 'major':++version.major
+                            break
+                        case 'minor':++version.minor
+                            break
+                        default:throw new GradleException("Invalid version type '" +
+                                "$classifier',Allowed types:['Major','Minor']")
+
+                    }
+                    String newVersion = version.toString()
+                    logger.info "Incrementing minor project version:$currentVersion -> $newVersion"
+                    ant.propertyfile(file:versionFile){
+                        entry(key:classifier,type:'int',operation:'+',value:1)
+                    }
+
+                }
+            }
+        }
+}
+
+//注册的声明周期钩子在task图生成之后调用
+gradle.taskGraph.whenReady {
+    TaskExecutionGraph taskgraph ->
+        if(taskgraph.hasTask(release)){
+            if(!version.release){
+                version.release = true
+                ant.propertyfile(file: versionFile){
+                    entry(key:'release',type:'string',operation:'=',value:'true')
+                }
+            }
+        }
+}
+
+def releaseVersionlistener = new ReleaseVersionListener()
+gradle.taskGraph.addTaskExecutionGraphListener(releaseVersionlistener)
+
+//打印依赖
+task testConfigyrations{
+    doLast {
+        configurations.getByName('compile').each {
+            dependency ->
+                logger.quiet dependency.toString()
+        }
+
+    }
+}
+
+task makeReleaseVersion(type: ReleaseVersionTask){
+    release = version.release
+    destFile = versionFile
+}
+
+
+//生成压缩Zip包
+task createDistribution(type:Zip,dependsOn:makeReleaseVersion){
+//    from war.outputs.file
+    from(sourceSets*.allSource){
+        //所有源文件都放在Zip文件的src目录下
+        into 'src'
+    }
+    from(rootDir){
+        //为zip文件添加版本文件
+        include versionFile.name
+    }
+}
+//拷贝备份
+task backupReleaseDistribution(type:Copy){
+    from createDistribution.outputs.files
+    into "$buildDir/backup"
+}
+
+
+task release(dependsOn:backupReleaseDistribution){
+    doLast {
+        logger.quiet "releasing the project"
+    }
+}
+

@@ -1,0 +1,5 @@
+apply plugin:'showTask'
+dependencies{
+    compile group: 'io.reactivex.rxjava2', name: 'rxjava', version: '2.2.14'
+    compile project(':repository')
+}
